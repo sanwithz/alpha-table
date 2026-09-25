@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ตารางเรียน ALPHA Academy</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=Mitr:wght@500;600&family=Montserrat:wght@700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+<script>
+  tailwind.config = { theme: { extend: { fontFamily: {
+    mali: ['Mali', 'Tahoma', 'sans-serif'],
+    mitr: ['Mitr', 'Tahoma', 'sans-serif'],
+    logo: ['Montserrat', 'Arial Black', 'sans-serif'],
+  } } } };
+</script>
+<style>
+  html, body { height: 100%; margin: 0; background: #fff; }
+  body { overflow: hidden; }
+  #stage { width: 2080px; height: 1460px; position: absolute; top: 0; left: 0; transform-origin: top left; background: #fff; }
+  .cell { border: 3.5px solid #111; border-radius: 18px; background: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 12px; }
+  .chip { height: 84px; min-width: 0; padding: 0 8px; border-radius: 16px; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.12; color: #1a1a1a; overflow: hidden; }
+  .chip.two { font-size: 27px; }
+  .chip.one { font-size: 31px; white-space: nowrap; }
+  .chip.en  { font-size: 25px; letter-spacing: .5px; white-space: nowrap; }
+  .chip.single { flex: none !important; width: 62%; }
+  .slash { font-size: 44px; color: #111; }
+  .day { border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 600; color: #111; }
+  .slot-now { box-shadow: 0 0 0 6px #F5C84B; }
+  .day-now { box-shadow: 0 0 0 5px #111; }
+
+  /* ---------- Edit mode ---------- */
+  .editing [data-key] { outline: 3px dashed #7aa2f7; outline-offset: 4px; border-radius: 10px; cursor: text; }
+  .editing [data-key]:focus { outline-color: #3E6FE0; background: rgba(62,111,224,.06); }
+  .editing .cell.slot { cursor: pointer; }
+  .editing .cell.slot:hover { background: #f3f6ff; box-shadow: 0 0 0 5px #7aa2f7; }
+  .editing .cell.slot:empty::after { content: '+'; font-size: 54px; color: #b7c6ee; }
+
+  /* ---------- Toolbar ---------- */
+  #toolbar { position: fixed; top: max(10px, env(safe-area-inset-top)); right: 10px; z-index: 40; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
+             opacity: .25; transition: opacity .2s; font-family: 'Mali', sans-serif; }
+  #toolbar:hover, #toolbar.on, body.editing-body #toolbar { opacity: 1; }
+  #toolbar button { font-size: 14px; padding: 6px 12px; border-radius: 10px; background: #fff; border: 1.5px solid #222; color: #111; }
+  #toolbar button:hover { background: #f4f4f4; }
+  #toolbar button:focus-visible, #editor button:focus-visible { outline: 3px solid #3E6FE0; outline-offset: 2px; }
+  #btnEdit.active { background: #3E6FE0; color: #fff; border-color: #3E6FE0; }
+  #toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: #111; color: #fff; padding: 8px 16px; border-radius: 10px; font: 14px 'Mali', sans-serif; z-index: 60; opacity: 0; transition: opacity .25s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+
+  /* ---------- Editor dialog ---------- */
+  #editor { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 50; display: none; align-items: center; justify-content: center; font-family: 'Mali', sans-serif; }
+  #editor.open { display: flex; }
+  .mode-btn { padding: 6px 12px; border-radius: 10px; border: 1.5px solid #ccc; font-size: 14px; background: #fff; }
+  .mode-btn.sel { border-color: #111; background: #111; color: #fff; }
+  .swatch { width: 30px; height: 30px; border-radius: 8px; border: 2px solid transparent; }
+  .swatch.sel { border-color: #111; box-shadow: 0 0 0 2px #fff inset; }
+  @media print { @page { size: A4 landscape; margin: 0; } #toolbar, #toast { display: none !important; } }
+</style>
+</head>
+<body class="font-mali">
+
+<div id="stage">
+  <!-- Logo -->
+  <div class="absolute" style="left:112px; top:30px; width:510px; height:240px;">
+    <svg class="absolute" style="left:0; top:0;" width="150" height="170" viewBox="0 0 150 170">
+      <line x1="75" y1="4" x2="75" y2="22" stroke="#3E6FE0" stroke-width="7" stroke-linecap="round"/>
+      <line x1="30" y1="16" x2="42" y2="30" stroke="#8FD17E" stroke-width="6" stroke-linecap="round"/>
+      <line x1="118" y1="16" x2="106" y2="30" stroke="#F5C84B" stroke-width="6" stroke-linecap="round"/>
+      <line x1="10" y1="56" x2="26" y2="56" stroke="#F2A874" stroke-width="6" stroke-linecap="round"/>
+      <line x1="122" y1="56" x2="138" y2="56" stroke="#E0463C" stroke-width="6" stroke-linecap="round"/>
+      <path d="M75 48 L136 160 L112 160 L75 92 Z" fill="#6FC16B"/>
+      <path d="M75 48 L68 62 L40 118 L58 118 L75 84 Z" fill="#6FC16B"/>
+      <path d="M26 118 L58 118 L38 160 L8 160 Z" fill="#3E6FE0"/>
+      <path d="M58 118 L96 118 L112 160 L38 160 Z" fill="#F5C84B"/>
+      <rect x="96" y="160" width="46" height="8" rx="2" fill="#E0463C"/>
+    </svg>
+    <div class="absolute font-logo" style="left:182px; top:12px; color:#23324a; font-size:84px; font-weight:800; letter-spacing:1px; line-height:1;">ALPHA</div>
+    <div class="absolute font-logo" style="left:186px; top:108px; color:#23324a; font-size:58px; font-weight:700; letter-spacing:1px; line-height:1;">ACADEMY</div>
+    <div class="absolute font-mitr" style="left:4px; top:178px; color:#23324a; font-size:46px; font-weight:600; letter-spacing:.5px; line-height:1.1; white-space:nowrap;">สถาบันอัลฟ่า อะคาเดมี</div>
+  </div>
+
+  <svg class="absolute" style="left:600px; top:-6px;" width="210" height="90" viewBox="0 0 210 90">
+    <path d="M12 40 C18 55, 26 66, 40 78" stroke="#F3BE52" stroke-width="12" stroke-linecap="round" fill="none"/>
+    <path d="M104 10 C105 26, 108 42, 112 54" stroke="#F3BE52" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M190 30 C182 36, 176 42, 172 48" stroke="#F3BE52" stroke-width="9" stroke-linecap="round" fill="none"/>
+  </svg>
+
+  <h1 class="absolute font-mali" style="left:692px; top:36px; font-size:86px; font-weight:700; color:#111; line-height:1.34; letter-spacing:1px; white-space:nowrap;">
+    <span class="block" data-key="title1"></span>
+    <span class="block" data-key="title2"></span>
+  </h1>
+
+  <div id="dots" class="absolute flex items-center" style="left:104px; top:298px; width:1880px; justify-content:space-between;"></div>
+
+  <div id="grid" class="absolute" style="left:52px; top:356px; width:1980px; display:grid;
+       grid-template-columns: 270px 350px 350px 150px 334px 334px; column-gap:38px;
+       grid-template-rows: 94px repeat(7, 125px); row-gap:16px;"></div>
+</div>
+
+<!-- Toolbar -->
+<div id="toolbar" aria-label="Schedule tools">
+  <button id="btnEdit" title="Edit mode (E)">✏️ Edit</button>
+  <button id="btnPng" title="Download as PNG">🖼 PNG</button>
+  <button id="btnExport" title="Download data as JSON">⬇ JSON</button>
+  <button id="btnImport" title="Load data from JSON">⬆ JSON</button>
+  <button id="btnReset" title="Restore the original schedule">↺ Reset</button>
+  <input id="fileImport" type="file" accept=".json,application/json" hidden>
+</div>
+<div id="toast"></div>
+
+<!-- Cell editor -->
+<div id="editor" role="dialog" aria-modal="true" aria-labelledby="edTitle">
+  <div class="bg-white rounded-2xl p-6 shadow-2xl" style="width:min(560px,92vw); max-height:92vh; overflow:auto;">
+    <h2 id="edTitle" class="text-xl font-semibold mb-4"></h2>
+    <div class="flex flex-wrap gap-2 mb-4" id="edModes">
+      <button class="mode-btn" data-mode="empty">Empty</button>
+      <button class="mode-btn" data-mode="slash">Only “/”</button>
+      <button class="mode-btn" data-mode="1">1 subject</button>
+      <button class="mode-btn" data-mode="2">2 subjects</button>
+    </div>
+    <div id="edSubjects" class="space-y-4"></div>
+    <div class="flex justify-between items-center mt-6 gap-2">
+      <button id="edSwap" class="mode-btn">⇄ Swap</button>
+      <div class="flex gap-2">
+        <button id="edCancel" class="mode-btn">Cancel</button>
+        <button id="edSave" class="mode-btn sel">Save</button>
+      </div>
+    </div>
+    <p class="text-xs text-gray-500 mt-3">Tip: press Enter inside a subject name for a 2‑line label (e.g. สอบเข้า / ม.1). Ctrl/⌘ + Enter saves.</p>
+  </div>
+</div>
+
+<script>
+/* ============ DEFAULT DATA ============ */
+const P = { pink:'#E6ABAB', green:'#B3D59A', blue:'#A0B8F2', orange:'#F2A874', yellow:'#F5C84B', lilac:'#EFD0EE', mauve:'#B9999A', purple:'#C4B1DC', mint:'#CFDED4' };
+const PALETTE = Object.values(P);
+const s = (t, c) => ({ t, c });
+const DEFAULT = {
+  title1: 'ตารางเรียน ALPHA Academy',
+  title2: 'ตุลาคม 69 - กุมภาพันธ์ 70',
+  corner: 'วัน/เวลา',
+  lunch1: 'พักกลางวัน',
+  lunch2: '12.00 - 13.00',
+  slots: ['08.00-10.00 น.', '10.00-12.00 น.', '13.00-15.00 น.', '17.00-19.00 น.'],
+  days: ['วันจันทร์','วันอังคาร','วันพุธ','วันพฤหัสบดี','วันศุกร์','วันเสาร์','วันอาทิตย์'],
+  // null = empty, [] = only "/", [a] or [a,b] = subjects
+  schedule: [
+    [null, null, null, [s('คอร์ส\nOnline',P.pink), s('คอร์ส\nOnline',P.pink)]],
+    [null, null, null, [s('ฟิสิกส์',P.green), s('ชีวะ',P.blue)]],
+    [null, null, null, [s('เคมี',P.orange), s('ฟิสิกส์',P.green)]],
+    [null, null, null, [s('ชีวะ',P.blue), s('สอบเข้า\nม.1',P.orange)]],
+    [null, null, null, [s('เคมี',P.orange), s('สอบเข้า\nม.1',P.orange)]],
+    [[], [s('สอบเข้า\nม.4',P.yellow), s('วิทย์ ม.3',P.green)], [s('คณิตฯ',P.blue), s('วิทย์ ม.1',P.green)], [s('NETSAT',P.mauve), s('A-LEVEL',P.mauve)]],
+    [[], [s('สอบเข้า\nม.4',P.yellow), s('คณิตฯ',P.blue)], [s('วิทย์ ม.2',P.green), s('อังกฤษ',P.lilac)], [s('NETSAT',P.mauve), s('A-LEVEL',P.mauve)]],
+  ],
+};
+const DAY_BG = ['#F9E3A1','#F0CFEE','#CFDED4','#F9D9A8','#D6E0F7','#C4B1DC','#E3A9A9'];
+const JS_DAY = [1,2,3,4,5,6,0];
+const SLOT_HOURS = [[8,10],[10,12],[13,15],[17,19]];
+const STORE_KEY = 'alpha-schedule-v1';
+
+/* ============ STATE ============ */
+const clone = o => JSON.parse(JSON.stringify(o));
+function load() {
+  try { const raw = localStorage.getItem(STORE_KEY); if (raw) return validate(JSON.parse(raw)); } catch (e) {}
+  return clone(DEFAULT);
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+function validate(d) {
+  if (!d || !Array.isArray(d.schedule) || d.schedule.length !== 7 || !d.schedule.every(r => Array.isArray(r) && r.length === 4)) throw new Error('Invalid schedule file');
+  return Object.assign(clone(DEFAULT), d);
+}
+let state = load();
+let editing = false, highlight = false;
+
+/* ============ RENDER ============ */
+const grid = document.getElementById('grid');
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const esc = t => String(t).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const place = (e, col, row, span = 1) => { e.style.gridColumn = col; e.style.gridRow = `${row} / span ${span}`; grid.appendChild(e); return e; };
+const gridCol = i => (i < 2 ? i + 2 : i + 3);
+const sizeOf = t => t.includes('\n') ? 'two' : (/^[\x00-\x7F]*$/.test(t) ? 'en' : 'one');
+const getKey = k => k.split('.').reduce((o, p) => o[p], state);
+const setKey = (k, v) => { const ps = k.split('.'); const last = ps.pop(); ps.reduce((o, p) => o[p], state)[last] = v; };
+
+// dots (static)
+const dotColors = [...Array(5).fill('#C9B8E3'), ...Array(3).fill('#E6CBD3'), ...Array(7).fill('#F9D2BD'), ...Array(15).fill('#F9E39C')];
+dotColors.forEach(col => { const d = el('span'); d.style.cssText = `width:25px;height:25px;border-radius:50%;background:${col};display:block`; document.getElementById('dots').appendChild(d); });
+
+let cellRefs = [];
+function render() {
+  grid.innerHTML = '';
+  place(el('div', 'cell', `<span data-key="corner" style="font-size:44px;font-weight:500"></span>`), 1, 1);
+  state.slots.forEach((_, i) => place(el('div', 'cell', `<span data-key="slots.${i}" style="font-size:36px;letter-spacing:1px"></span>`), gridCol(i), 1));
+
+  const lunch = el('div', 'relative overflow-hidden');
+  lunch.style.cssText = 'background:#F9E39C;border-radius:18px;height:calc(100% + 12px)';
+  lunch.innerHTML = `
+    <svg class="absolute" style="left:48px;top:55px" width="80" height="140" viewBox="0 0 80 140">
+      <path d="M30 4 C31 30,34 38,56 42 C34 46,31 54,30 86 C29 54,26 46,4 42 C26 38,29 30,30 4Z" fill="#F3C94F"/>
+      <circle cx="62" cy="72" r="4" fill="#F3C94F"/><circle cx="42" cy="100" r="6" fill="#F3C94F"/>
+      <circle cx="74" cy="108" r="8" fill="#F3C94F"/><circle cx="8" cy="138" r="4" fill="#F3C94F"/>
+    </svg>
+    <span class="absolute" style="left:8px;top:372px;width:9px;height:9px;border-radius:50%;background:#F3C94F"></span>
+    <span class="absolute" style="left:126px;top:530px;width:9px;height:9px;border-radius:50%;background:#F3C94F"></span>
+    <div class="absolute" style="left:50%;top:445px;transform:translate(-50%,-50%) rotate(-90deg);white-space:nowrap;text-align:center;line-height:1.2;color:#111">
+      <div data-key="lunch1" style="font-size:42px;font-weight:600"></div>
+      <div data-key="lunch2" style="font-size:38px;letter-spacing:1px"></div>
+    </div>`;
+  place(lunch, 4, 1, 8);
+
+  cellRefs = [];
+  state.days.forEach((_, r) => {
+    const label = el('div', 'day', `<span data-key="days.${r}"></span>`);
+    label.style.background = DAY_BG[r]; label.dataset.row = r;
+    place(label, 1, r + 2);
+    cellRefs[r] = state.schedule[r].map((entry, i) => {
+      const cell = el('div', 'cell slot');
+      cell.dataset.r = r; cell.dataset.i = i;
+      if (entry) {
+        if (entry.length === 0) cell.appendChild(el('span', 'slash', '/'));
+        entry.forEach((sub, k) => {
+          if (k > 0) cell.appendChild(el('span', 'slash', '/'));
+          const chip = el('div', `chip ${sizeOf(sub.t)}${entry.length === 1 ? ' single' : ''}`, '<span>' + esc(sub.t).replace(/\n/g, '<br>') + '</span>');
+          chip.style.background = sub.c; chip.style.flex = '1';
+          cell.appendChild(chip);
+        });
+      }
+      return place(cell, gridCol(i), r + 2);
+    });
+  });
+
+  document.querySelectorAll('[data-key]').forEach(n => { n.textContent = getKey(n.dataset.key); });
+  setEditable(editing);
+  requestAnimationFrame(shrinkChips);
+  applyHighlight();
+}
+
+// Shrink text in chips that overflow (long subject names)
+function shrinkChips() {
+  const over = c => c.scrollWidth > c.clientWidth + 1 || c.firstElementChild.offsetHeight > c.clientHeight - 6;
+  document.querySelectorAll('.chip').forEach(c => {
+    c.style.fontSize = ''; c.style.whiteSpace = '';
+    let fs = parseFloat(getComputedStyle(c).fontSize);
+    // 1) shrink a little, 2) wrap long one-line names, 3) shrink more if still needed
+    while (over(c) && fs > 26) { fs -= 1; c.style.fontSize = fs + 'px'; }
+    if (over(c) && c.classList.contains('one')) { c.style.whiteSpace = 'normal'; fs = 27; c.style.fontSize = fs + 'px'; }
+    while (over(c) && fs > 16) { fs -= 1; c.style.fontSize = fs + 'px'; }
+  });
+}
+
+/* ============ FIT TO SCREEN ============ */
+const stage = document.getElementById('stage');
+function fit() {
+  const sc = Math.min(innerWidth / 2080, innerHeight / 1460);
+  stage.style.transform = `scale(${sc})`;
+  stage.style.left = `${(innerWidth - 2080 * sc) / 2}px`;
+  stage.style.top = `${(innerHeight - 1460 * sc) / 2}px`;
+}
+addEventListener('resize', fit); fit();
+
+/* ============ EDIT MODE: inline text ============ */
+function setEditable(on) {
+  document.querySelectorAll('[data-key]').forEach(n => { n.contentEditable = on ? 'plaintext-only' : 'false'; if (on && n.contentEditable !== 'plaintext-only') n.contentEditable = 'true'; });
+}
+function toggleEdit(force) {
+  editing = force ?? !editing;
+  stage.classList.toggle('editing', editing);
+  document.body.classList.toggle('editing-body', editing);
+  document.getElementById('btnEdit').classList.toggle('active', editing);
+  document.getElementById('btnEdit').textContent = editing ? '✔ Done' : '✏️ Edit';
+  setEditable(editing);
+  if (!editing) document.activeElement?.blur();
+  toast(editing ? 'Edit mode: click any text or cell' : 'Saved');
+}
+stage.addEventListener('keydown', e => {
+  const n = e.target.closest('[data-key]');
+  if (n && e.key === 'Enter') { e.preventDefault(); n.blur(); }
+  if (n && e.key === 'Escape') { n.textContent = getKey(n.dataset.key); n.blur(); }
+});
+stage.addEventListener('focusout', e => {
+  const n = e.target.closest?.('[data-key]');
+  if (!n) return;
+  const v = n.textContent.replace(/\s+/g, ' ').trim();
+  if (v) { setKey(n.dataset.key, v); save(); } else n.textContent = getKey(n.dataset.key);
+});
+stage.addEventListener('paste', e => {
+  if (!e.target.closest('[data-key]')) return;
+  e.preventDefault();
+  document.execCommand('insertText', false, (e.clipboardData.getData('text/plain') || '').replace(/\s+/g, ' '));
+});
+stage.addEventListener('click', e => {
+  if (!editing) return;
+  const cell = e.target.closest('.cell.slot');
+  if (cell) openEditor(+cell.dataset.r, +cell.dataset.i);
+});
+
+/* ============ CELL EDITOR ============ */
+const editor = document.getElementById('editor');
+let draft = null, target = null;
+function openEditor(r, i) {
+  target = [r, i];
+  const entry = state.schedule[r][i];
+  const subs = entry ? clone(entry) : [];
+  while (subs.length < 2) subs.push({ t: '', c: PALETTE[subs.length ? 2 : 1] });
+  draft = { mode: entry === null ? 'empty' : entry.length === 0 ? 'slash' : String(entry.length), subs };
+  document.getElementById('edTitle').textContent = `${state.days[r]} · ${state.slots[i]}`;
+  drawEditor();
+  editor.classList.add('open');
+  setTimeout(() => editor.querySelector('textarea, .mode-btn.sel')?.focus(), 30);
+}
+function drawEditor() {
+  document.querySelectorAll('#edModes .mode-btn').forEach(b => b.classList.toggle('sel', b.dataset.mode === draft.mode));
+  const n = +draft.mode || 0;
+  document.getElementById('edSwap').style.visibility = n === 2 ? 'visible' : 'hidden';
+  const box = document.getElementById('edSubjects');
+  box.innerHTML = '';
+  for (let k = 0; k < n; k++) {
+    const sub = draft.subs[k];
+    const wrap = el('div', 'rounded-xl p-3', '');
+    wrap.style.background = sub.c + '55';
+    wrap.innerHTML = `
+      <label class="text-sm font-medium block mb-1">Subject ${k + 1}</label>
+      <textarea rows="2" class="w-full rounded-lg border border-gray-300 p-2 text-lg" placeholder="e.g. ชีวะ">${esc(sub.t)}</textarea>
+      <div class="flex flex-wrap items-center gap-2 mt-2">
+        ${PALETTE.map(c => `<button type="button" class="swatch${c.toLowerCase() === sub.c.toLowerCase() ? ' sel' : ''}" data-c="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join('')}
+        <input type="color" value="${sub.c}" class="w-9 h-8 rounded cursor-pointer" aria-label="Custom color">
+      </div>`;
+    wrap.querySelector('textarea').addEventListener('input', e => { sub.t = e.target.value.replace(/\n{2,}/g, '\n'); });
+    wrap.querySelectorAll('.swatch').forEach(b => b.addEventListener('click', () => { sub.c = b.dataset.c; drawEditor(); }));
+    wrap.querySelector('input[type=color]').addEventListener('change', e => { sub.c = e.target.value; drawEditor(); });
+    box.appendChild(wrap);
+  }
+}
+document.getElementById('edModes').addEventListener('click', e => {
+  const b = e.target.closest('.mode-btn'); if (!b) return;
+  draft.mode = b.dataset.mode; drawEditor();
+});
+document.getElementById('edSwap').onclick = () => { draft.subs.reverse(); drawEditor(); };
+function closeEditor() { editor.classList.remove('open'); draft = target = null; }
+function commitEditor() {
+  const [r, i] = target; const n = +draft.mode || 0;
+  let val = draft.mode === 'empty' ? null : draft.mode === 'slash' ? [] : draft.subs.slice(0, n).map(x => ({ t: x.t.trim(), c: x.c }));
+  if (val && val.length && val.some(x => !x.t)) { toast('Please type a subject name (or pick “Empty”)'); return; }
+  state.schedule[r][i] = val;
+  save(); closeEditor(); render();
+}
+document.getElementById('edCancel').onclick = closeEditor;
+document.getElementById('edSave').onclick = commitEditor;
+editor.addEventListener('click', e => { if (e.target === editor) closeEditor(); });
+editor.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeEditor();
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) commitEditor();
+});
+
+/* ============ TOOLBAR ============ */
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 1800); }
+function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+
+document.getElementById('btnEdit').onclick = () => toggleEdit();
+document.getElementById('btnExport').onclick = () => download('alpha-schedule.json', new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+document.getElementById('btnImport').onclick = () => document.getElementById('fileImport').click();
+document.getElementById('fileImport').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { state = validate(JSON.parse(await f.text())); save(); render(); toast('Schedule loaded'); }
+  catch (err) { toast('Could not load: ' + err.message); }
+  e.target.value = '';
+};
+document.getElementById('btnReset').onclick = () => {
+  if (!confirm('Restore the original schedule? Your edits will be replaced.')) return;
+  state = clone(DEFAULT); save(); render(); toast('Original schedule restored');
+};
+document.getElementById('btnPng').onclick = async () => {
+  if (!window.htmlToImage) { toast('PNG export needs an internet connection'); return; }
+  const wasEditing = editing, wasHL = highlight;
+  if (editing) toggleEdit(false);
+  highlight = false; applyHighlight();
+  toast('Creating PNG…');
+  const prev = stage.style.cssText;
+  try {
+    await document.fonts.ready;
+    const blob = await htmlToImage.toBlob(stage, {
+      width: 2080, height: 1460, pixelRatio: 1, backgroundColor: '#ffffff',
+      style: { transform: 'none', left: '0', top: '0' },
+    });
+    download('alpha-schedule.png', blob);
+  } catch (err) { toast('PNG export failed: ' + (err.message || err)); }
+  stage.style.cssText = prev;
+  highlight = wasHL; applyHighlight();
+  if (wasEditing) toggleEdit(true);
+};
+
+/* ============ TODAY HIGHLIGHT (H) ============ */
+function applyHighlight() {
+  document.querySelectorAll('.slot-now, .day-now').forEach(n => n.classList.remove('slot-now', 'day-now'));
+  if (!highlight) return;
+  const now = new Date(), r = JS_DAY.indexOf(now.getDay());
+  document.querySelector(`.day[data-row="${r}"]`)?.classList.add('day-now');
+  const h = now.getHours() + now.getMinutes() / 60;
+  const i = SLOT_HOURS.findIndex(([a, b]) => h >= a && h < b);
+  if (i >= 0) cellRefs[r][i].classList.add('slot-now');
+}
+setInterval(applyHighlight, 60000);
+
+/* ============ SHORTCUTS ============ */
+const isTyping = t => t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+const toggleFull = () => document.fullscreenElement ? document.exitFullscreen?.() : document.documentElement.requestFullscreen?.().catch(() => {});
+document.addEventListener('keydown', e => {
+  if (isTyping(e.target) || editor.classList.contains('open') || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'e') toggleEdit();
+  else if (k === 'f') toggleFull();
+  else if (k === 'h') { highlight = !highlight; applyHighlight(); }
+  else if (k === 'p') print();
+  else if (k === 'escape' && editing) toggleEdit(false);
+});
+document.addEventListener('dblclick', e => { if (!editing && !e.target.closest('#toolbar')) toggleFull(); });
+
+document.fonts?.ready.then(shrinkChips);
+render();
+</script>
+</body>
+</html>
